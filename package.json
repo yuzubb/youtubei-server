@@ -9,6 +9,6 @@
   "dependencies": {
     "express": "^4.18.2",
     "node-cache": "^5.1.2",
-    "youtubei.js": "latest" 
+    "youtubei": "latest" 
   }
 }
