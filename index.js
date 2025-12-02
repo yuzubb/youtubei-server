@@ -1,13 +1,14 @@
 import express from 'express';
 import { Innertube } from 'youtubei.js';
 import NodeCache from 'node-cache';
+// formatは使用していませんが、以前のコード互換性を保つために一応残します
+// import { format } from 'util'; 
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 const videoCache = new NodeCache({ stdTTL: 3600, checkperiod: 120 });
 
-// 失敗時/情報不足時に返す固定の空のレスポンス構造
 const BLANK_RESPONSE = {
     id: null,
     title: null,
@@ -105,7 +106,15 @@ const mapVideoInfo = (info) => {
 };
 
 async function startServer() {
-    const youtube = await Innertube.create();
+    // サーバー起動時にInnertubeの初期化が失敗する可能性もあるため、try/catchで囲む
+    let youtube;
+    try {
+        youtube = await Innertube.create();
+    } catch (e) {
+        console.error('Failed to initialize Innertube:', e.message);
+        // 初期化に失敗した場合、サーバーを終了するか、API呼び出しをすべて失敗させる
+        // 今回はデバッグのため続行し、APIでエラーを出す
+    }
 
     app.get('/', (req, res) => {
         res.send('youtubei.js Caching Server is running!');
@@ -117,24 +126,35 @@ async function startServer() {
 
         const cachedData = videoCache.get(cacheKey);
         if (cachedData) {
-            // キャッシュがヒットした場合、そのまま返す (ステータス200)
             return res.json(cachedData);
+        }
+        
+        // youtubeが初期化に失敗していた場合は、ここでエラーを返す
+        if (!youtube) {
+             console.error(`[CRITICAL ERROR] youtubei.js initialization failed. Cannot process request for ${videoId}.`);
+             return res.status(200).json(BLANK_RESPONSE);
         }
 
         try {
             const info = await youtube.getInfo(videoId);
+            
+            // データが取得できたことをログに出力
+            console.log(`[SUCCESS] Successfully fetched data for videoId: ${videoId}`);
 
             const mappedData = mapVideoInfo(info);
 
-            // 成功レスポンスをクライアントに送信 (ステータス200)
             res.json(mappedData);
-
-            // 成功した場合のみ、レスポンスをキャッシュに保存
             videoCache.set(cacheKey, mappedData);
 
         } catch (error) {
-            // エラーが発生した場合 (動画が見つからないなど) はキャッシュせず、
-            // ユーザー指定の空のJSON構造とステータス200を返す
+            // エラーが発生した場合、詳細な情報をログに出力する
+            console.error(`[FETCH ERROR] Failed to fetch video ${videoId}.`, {
+                message: error.message,
+                status: error.statusCode || 'N/A',
+                stack: error.stack
+            });
+            
+            // 失敗した場合、キャッシュせず、ユーザー指定の空のJSON構造とステータス200を返す
             return res.status(200).json(BLANK_RESPONSE);
         }
     });
