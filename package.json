@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "YouTube video info API with 1-hour caching using youtubei.js",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "node-cache": "^5.1.2",
-    "youtubei": "latest" 
+    "youtubei.js": "latest"
   }
 }
