@@ -20,15 +20,20 @@ app.get('/api/comment/:videoid', async (req, res) => {
 
   try {
     const yt = await initYoutube();
-    const video = await yt.getInfo(videoId);
-    const comments = await video.getComments();
+    
+    // getComments(videoId) を直接呼び出すのが最新の安定した方法です
+    const commentData = await yt.getComments(videoId);
 
-    const responseData = (comments.contents || []).map(comment => ({
-      channelName: comment.author?.name || 'Unknown',
-      channelIcon: comment.author?.thumbnails[0]?.url || '',
-      channelId: comment.author?.id || '',
-      content: comment.content?.toString() || ''
-    }));
+    // 必要なデータのみを抽出
+    const responseData = (commentData.contents || []).map(comment => {
+      // YouTubei.js のコメントオブジェクト構造に対応
+      return {
+        channelName: comment.author?.name || 'Unknown',
+        channelIcon: comment.author?.thumbnails[0]?.url || '',
+        channelId: comment.author?.id || '',
+        content: comment.content?.toString() || ''
+      };
+    });
 
     res.json({
       success: true,
@@ -46,9 +51,8 @@ app.get('/api/comment/:videoid', async (req, res) => {
   }
 });
 
-// Vercelなどの環境ではルートパスへのリクエストも考慮
 app.get('/', (req, res) => {
-  res.send('YouTube Comment API is running. Use /api/comment/:videoid');
+  res.send('YouTube Comment API is running.');
 });
 
 app.listen(PORT, () => {
