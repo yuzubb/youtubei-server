@@ -8,6 +8,7 @@ let youtube;
 
 async function initYoutube() {
   if (!youtube) {
+    // 確実に最新のブラウザとして振る舞うよう初期化
     youtube = await Innertube.create();
     console.log('YouTubei.js initialized');
   }
@@ -20,18 +21,21 @@ app.get('/api/comment/:videoid', async (req, res) => {
   try {
     const yt = await initYoutube();
     
-    // コメントデータの取得
+    // コメントを取得
     const commentData = await yt.getComments(videoId);
 
-    // YouTubei.js の内部構造に合わせてマッピング
+    // YouTubei.js の Comment オブジェクトから値を抽出
     const responseData = (commentData.contents || []).map(comment => {
+      // コメント投稿者の情報
+      const author = comment.author;
+      
       return {
-        // author.name.toString() などで文字列を抽出
-        channelName: comment.author?.name?.toString() || 'Unknown',
-        // アイコンは thumbnails の中から適切なサイズを選択
-        channelIcon: comment.author?.thumbnails?.[0]?.url || '',
-        channelId: comment.author?.id || '',
-        // comment.content は Text オブジェクトなので toString() が必要
+        // author.name.text または author.name.toString() で取得
+        channelName: author?.name?.toString() || 'Unknown',
+        // thumbnails配列の最後の要素が通常一番高画質
+        channelIcon: author?.thumbnails?.at(-1)?.url || '',
+        channelId: author?.id || '',
+        // comment.content.toString() で全テキストを結合して取得
         content: comment.content?.toString() || ''
       };
     });
@@ -39,11 +43,12 @@ app.get('/api/comment/:videoid', async (req, res) => {
     res.json({
       success: true,
       videoId: videoId,
+      count: responseData.length,
       comments: responseData
     });
 
   } catch (error) {
-    console.error('Error fetching comments:', error);
+    console.error('Error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch comments',
@@ -53,7 +58,7 @@ app.get('/api/comment/:videoid', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send('YouTube Comment API is running.');
+  res.send('YouTube Comment API is active.');
 });
 
 app.listen(PORT, () => {
