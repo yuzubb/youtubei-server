@@ -1,17 +1,13 @@
 {
   "name": "youtube-comment-api",
   "version": "1.0.0",
-  "description": "YouTubei.js を使用したコメント取得APIサーバー",
-  "main": "index.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "youtubei.js": "latest"
-  },
-  "engines": {
-    "node": ">=16.0.0"
+    "youtubei.js": "^12.2.0"
   }
 }
